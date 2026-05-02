@@ -1,0 +1,6 @@
+# Ignorar bóveda de credenciales
+.env
+
+# Ignorar caché de Python
+__pycache__/
+*.pyc
