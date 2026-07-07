@@ -136,6 +136,7 @@ def pauseclean():
 def clean():
   os.system('cls')
 
+
 from local_db_functions import TablesIntegrity,  InsertMethods
 from cust_db_functions import AddCustomer, GetCustomer
 from crud_products import AddProduct, EditProduct, DeleteProduct, ReadProducts, IsDeleted
@@ -164,6 +165,7 @@ except AttributeError as e:
 
 #!!!!!!!!!NOTA: LIMPIAR EL PUTO PERRO CODIGO ARCHIVO POR ARCHIVO SEGUN EL CODIGO LIMPIO PARA NO SER TAN DESASTROSO.
 #voy a romper algo mrc estoy seguro, pero bueno es mejor a largo plazo hacerlo ya.
+#si lo rompi pero sobreviví lol xd
 
 #AddProduct(Inventariodef[0])
 #AddProduct(Inventariodef[1])
@@ -222,11 +224,9 @@ while True:
    clean()
    print("\n\t\t---LIBRO DIARIO---\n")
    print("\n\t\t---Página ---\n")
-   datos=ReadSales(page)
+
+   PrintSales(MakeDictSale(ReadSales(page)))
    
-   salespy=MakeDictSale(datos)
-  
-   PrintSales(salespy)
    while True:
      try:
        case=int(input("\n\t¿Siguiente página? si\\1"))
@@ -281,9 +281,7 @@ while True:
    #opcion 1 Reporte total del inventario
   if opcion==1:
     
-     Inventario=ReadProducts()
-     Inventariopy=TurnIntoFloat(Inventario)
-     PrintInventory(Inventariopy)
+     PrintInventory(TurnIntoFloat(ReadProducts(1)))
      
  #opcion 2 añadir algo al inventario
   elif opcion==2:
@@ -298,7 +296,7 @@ while True:
 
  #opcion 3 modificar valores de un productos existente
   elif opcion==3:
-    Inventario=ReadProducts()
+    Inventario=ReadProducts(page)
     Inventariopy=TurnIntoFloat(Inventario)
     PrintInventory(Inventariopy) 
    

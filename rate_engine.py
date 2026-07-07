@@ -1,5 +1,6 @@
 import requests
 import json
+import customtkinter
 
 from requests.exceptions import ConnectionError
 
@@ -41,7 +42,15 @@ def consulta_bcv():
         return(TasaBcv, TasaPll, TasaPrm, fecha)
 
     except requests.exceptions.RequestException as e: 
-        print(f"Problemas para acceder al servidor: {e}\n")
+        #print(f"Problemas para acceder al servidor: {e}\n")
+        win=customtkinter.CTk()
+        win.title=("Error")
+        win.geometry("200x200")
+        win.mainloop()
+        return None
+
+
+
         
         
         
@@ -79,11 +88,15 @@ def obtener_euro_bcv():
             tasa_float = float(tasa.replace(',', '.'))
             return tasa_float
         else:
-            print("No se encontró el contenedor del Euro.")
+            #print("No se encontró el contenedor del Euro.")
             return None
 
     except Exception as e:
-        print(f"Error haciendo scraping al BCV: {e}")
+        #print(f"Error haciendo scraping al BCV: {e}")
+        win=customtkinter.CTk()
+        win.title=("!Error")
+        win.geometry("200x200")
+        win.mainloop()
         return None
 
 # Prueba

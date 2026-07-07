@@ -45,6 +45,7 @@ def GetDailyReport():
                         sales.sales_change_cent_bs, sales.sales_change_cent_usd
                         FROM sales
                         WHERE sales_day= CURRENT_DATE
+                        ORDER BY sales_id DESC
                         """)
             
             datadicc=cur.fetchall()
@@ -89,7 +90,7 @@ def GetDailyReport():
                 
 
 #ESTA FUNCION TE DEVUELVE TODAS LAS VENTAS HECHAS HISTORICAMENTE
-def ReadSales(page, quantity=100):
+def ReadSales(page, quantity=50):
 
     offset=(page-1)*quantity
     with psycopg.connect(conninfo, row_factory=dict_row) as conn:
@@ -97,12 +98,12 @@ def ReadSales(page, quantity=100):
             cur.execute("""SELECT sales.sales_day, sales.sales_id, sales.sales_rate_cent_bs, sales.sales_total_cent_usd,
                         sales.sales_change_cent_bs, sales.sales_change_cent_usd
                         FROM sales
-                        ORDER BY sales_id
+                        ORDER BY sales_id DESC
                         LIMIT %s OFFSET %s
                         """, (quantity, offset))
             
-            datosdicc= cur.fetchall()
-            return datosdicc
+            
+            return cur.fetchall()
         
 ##---IMPORTANTE---
 ##Debo aplicar un JOIN para sacar todos los datos de un solo golpe, ver como
