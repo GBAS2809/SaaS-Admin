@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-conninfo = f"dbname={os.getenv('DB_NAME')} user={os.getenv('DB_TABLES_USER')} password={os.getenv('DB_TABLES_PASS')} host={os.getenv('DB_HOST')} connect_timeout=5"
+conninfo = f"dbname={os.getenv('DB_NAME')} user={os.getenv('DB_TABLES_USER')} password={os.getenv('DB_TABLES_PASS')} host={os.getenv('DB_HOST')} connect_timeout=3"
 
 #DEBO HACER UNA FUNCION CHECKSTOCK para hacer saltar una notificación en caso del que producto se acabe.
 
@@ -21,6 +21,19 @@ def AddProduct(product_dict):
  except psycopg.OperationalError as e:
      return None
             
+def getProduct(pid):
+   try: 
+      with psycopg.connect(conninfo, row_factory=dict_row) as conn:
+         with conn.cursor() as cur:
+            cur.execute(""" SELECT product_name, product_price, product_stock, product_cost, product_category
+                        FROM products
+                        WHERE product_id=%s""", (pid, ) )
+            
+            return cur.fetchone()
+   except psycopg.OperationalError as e:
+      return None
+
+
 # Updates the data of a product from a dictionary.
 def EditProduct(product_dict, product_id):
  try:
@@ -28,7 +41,7 @@ def EditProduct(product_dict, product_id):
         with conn.cursor() as cur:
 
             cur.execute(""" UPDATE products
-                       SET product_name=%s, product_stock= %s, 
+                       SET product_name= %s, product_stock= %s, 
                        product_price= %s, product_cost= %s, product_category= %s
                        WHERE product_id= %s""",
                        (product_dict["product_name"], product_dict["product_stock"],
@@ -49,7 +62,7 @@ def DeleteProduct(product_id):
                        SET is_active = false
                        WHERE product_id= %s""", (product_id, ))
  except psycopg.OperationalError:
-    return None
+    return
 # Fetchs the price on float, with the product id.
 def GetPrice(product_id):
  try:
@@ -95,8 +108,10 @@ def ReadProducts(page, quantity=100):
         with conn.cursor() as cur:
 
             cur.execute("""SELECT * FROM PRODUCTS
+                        WHERE is_active = true
                         ORDER BY product_id
-                        LIMIT %s OFFSET %s""", (quantity, offset))
+                        LIMIT %s OFFSET %s
+                        """, (quantity, offset))
 
             return cur.fetchall()
  except psycopg.OperationalError as e:
@@ -105,7 +120,7 @@ def ReadProducts(page, quantity=100):
 #    *Cleans all the data before fetching into the database 
 def cleanProductDB(entryDataList):
        
-    dictionary={"product_name": entryDataList[0].strip(), "product_price": entryDataList[2], "product_stock": entryDataList[1], "product_cost": entryDataList[3], "product_category": entryDataList[4]}
+    dictionary={"product_name": entryDataList[0].strip(), "product_price": entryDataList[1], "product_stock": entryDataList[2], "product_cost": entryDataList[3], "product_category": entryDataList[4]}
 
 
     

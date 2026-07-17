@@ -4,12 +4,13 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-conninfo = f"dbname={os.getenv('DB_NAME')} user={os.getenv('DB_TABLES_USER')} password={os.getenv('DB_TABLES_PASS')} host={os.getenv('DB_HOST')}"
+conninfo = f"dbname={os.getenv('DB_NAME')} user={os.getenv('DB_TABLES_USER')} password={os.getenv('DB_TABLES_PASS')} host={os.getenv('DB_HOST')} connect_timeout=3"
 
 
 #Submit Sale is in charge of submitting all the info in the tables Sales, details_sales, pay sales. Therefore it updates the stock
 #Substracting the sold products
 def SubmitSale(payment_cent, customer_def,  products_list, totalref_cent, rate_snapshot_cent):
+ try:
 
     with psycopg.connect(conninfo, row_factory=dict_row) as conn:
         with conn.cursor() as cur:
@@ -33,11 +34,14 @@ def SubmitSale(payment_cent, customer_def,  products_list, totalref_cent, rate_s
             for pay in payment_cent:   
                 cur.execute("""INSERT INTO pay_sales(payment_cents, sales_id, method_id, value_usd_cents)
                         VALUES (%s, %s, %s, %s)""", (pay['payment_cents'], id_sale, pay['method_id'], pay['value_usd_cents']))
+ except psycopg.OperationalError as e:
+     return e
 
 
 #ESTA FUNCION DA EL CIERRE DE HOY
 #Devuelve todas las ventas y el cierre total. Da el cierre total.
 def GetDailyReport():
+ try:
     with psycopg.connect(conninfo, row_factory=dict_row) as conn:
         with conn.cursor() as cur:
 
@@ -51,14 +55,13 @@ def GetDailyReport():
             datadicc=cur.fetchall()
 
             if datadicc== None:
-                print("\n\tNo hay ventas.\n")
+                print("\n\tNo hay ventas.\n")                                  #ARREGLAR ESTA MIERDA!!!!!!!!
                 return
             
             float_total_day=0
             float_bs=0
             float_usd=0
-            
-            
+
             for n in datadicc:
 
                 cur.execute(""" SELECT pay_sales.payment_cents, pay_sales.method_id
@@ -71,28 +74,25 @@ def GetDailyReport():
                         float_bs+=(float(i['payment_cents'])/100)
                     else:
                         float_usd+=int(i['payment_cents']/100)
-                      
-                
 
                 n['sales_rate_cent_bs']/=100
                 n['sales_total_cent_usd']/=100
                 n['sales_change_cent_bs']/=100
                 n['sales_change_cent_usd']/=100
 
-
-
                 float_total_day+=n['sales_total_cent_usd']
 
-            
-
             return datadicc, round(float_total_day, 2), round(float_bs, 2), float_usd
+ except psycopg.OperationalError as e:
+     return None, 0, 0, 0 #chequear la compatibilidad de esto
 
                 
 
 #ESTA FUNCION TE DEVUELVE TODAS LAS VENTAS HECHAS HISTORICAMENTE
 def ReadSales(page, quantity=50):
 
-    offset=(page-1)*quantity
+ offset=(page-1)*quantity
+ try:
     with psycopg.connect(conninfo, row_factory=dict_row) as conn:
         with conn.cursor() as cur:
             cur.execute("""SELECT sales.sales_day, sales.sales_id, sales.sales_rate_cent_bs, sales.sales_total_cent_usd,
@@ -102,8 +102,9 @@ def ReadSales(page, quantity=50):
                         LIMIT %s OFFSET %s
                         """, (quantity, offset))
             
-            
             return cur.fetchall()
+ except psycopg.OperationalError:
+    return []
         
 ##---IMPORTANTE---
 ##Debo aplicar un JOIN para sacar todos los datos de un solo golpe, ver como
@@ -114,6 +115,7 @@ def ReadSales(page, quantity=50):
 #Obtener los pagos y detalles de pago.
 #Entra el id de una venta y sale una lista de diccionarios, con los detalles del pago.
 def GetPay(sales_id):
+ try:
 
     with psycopg.connect(conninfo, row_factory=dict_row) as conn:
         with conn.cursor() as cur:
@@ -123,9 +125,9 @@ def GetPay(sales_id):
                         JOIN pay_methods ON pay_sales.method_id=pay_methods.method_id
                         WHERE sales_id=%s""", (sales_id, ))
             
-
-            lista=cur.fetchall()
-            return lista 
+            return cur.fetchall() 
+ except psycopg.OperationalError:
+    return []
 
 
 #Obtener los detalles de la venta.

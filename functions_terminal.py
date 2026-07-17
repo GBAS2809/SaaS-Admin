@@ -122,10 +122,15 @@ def MakeDictProduct_DB(string_name, int_stock, float_price, float_cost, string_c
 #Takes a generic dictionary with database integers, then looks for integer values and chages them to floats for python 
 #Modify to make it work with all project keys. Price, cost, total, rates, change_usd, change_bs.
 def TurnIntoFloat(Inventario):
-  for prod in Inventario:
+  if type(Inventario) is list:
+   for prod in Inventario:
     prod['product_price']=prod['product_price']/100
     prod['product_cost']=prod['product_cost']/100
-  return Inventario
+   return Inventario
+  if type(Inventario) is dict:
+    Inventario['product_price']=Inventario['product_price']/100
+    Inventario['product_cost']=Inventario['product_cost']/100
+    return Inventario
 
 
 
