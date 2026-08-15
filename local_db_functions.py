@@ -3,13 +3,13 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-createinfo = f"dbname={os.getenv('DB_NAME')} user={os.getenv('DB_CREATE_USER')} password={os.getenv('DB_CREATE_PASS')} host={os.getenv('DB_HOST')}"
+createinfo = f"dbname={os.getenv('DB_NAME')} user={os.getenv('DB_CREATE_USER')} password={os.getenv('DB_CREATE_PASS')} host={os.getenv('DB_HOST')} connect_timeout=3"
 
 
 #Tables Integrity inicializes the tables if doesn't exist.
 #The tables are normalized so if two tables refers to the same thing, they use the same name.
 def TablesIntegrity():
-
+ try:
     with psycopg.connect(createinfo) as conn:
         with conn.cursor() as cur:
 
@@ -46,6 +46,7 @@ def TablesIntegrity():
                         sales_change_cent_bs INTEGER NOT NULL DEFAULT 0,
                         sales_change_cent_usd INTEGER NOT NULL DEFAULT 0,
                         customer_id INTEGER NOT NULL,
+                        is_active BOOL DEFAULT TRUE,
                         FOREIGN KEY(customer_id) REFERENCES customers(customer_id))""")
             #rate is used for the daily used rate 
             #change_usd and bs is for cash change.
@@ -77,10 +78,13 @@ def TablesIntegrity():
                         method_id INTEGER,
                         FOREIGN KEY (method_id) REFERENCES pay_methods(method_id),
                         FOREIGN KEY(sales_id) REFERENCES sales(sales_id))""")
+ except psycopg.OperationalError as e:
+     return e
           
             
 #Insert Methods inserts the methods only if are not inserted.
 def InsertMethods():
+ try:
     with psycopg.connect(createinfo) as conn:
         with conn.cursor() as cur:
             cur.execute("""  INSERT INTO pay_methods(method_id, method_name, method_currency)
@@ -103,21 +107,25 @@ def InsertMethods():
                    SELECT 5 , 'zelle', 'USD'
                    WHERE NOT EXISTS (
                    SELECT 5 FROM pay_methods WHERE method_id=5)""")
+ except psycopg.OperationalError as e:
+    return e
 
 if __name__=="__main__":
 
     try:
         TablesIntegrity()
         print("tablas añadidas")
-        InsertMethods()
+        e=InsertMethods()
         print("metodos insertados")
-    except Exception as e:
+    except Exception:
+     if e:
         print(f"Error al inicializar las tablas. Revisa:\n\t {e}")
         exit()
     try:
         InsertMethods()
         print("metodos insertados")
     except Exception as e:
+     if e:
         print(f"Error al insertar los métodos de pago. Revisa:\n\t{e}")
         exit()
 

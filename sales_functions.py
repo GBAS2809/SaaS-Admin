@@ -6,6 +6,9 @@ load_dotenv()
 
 conninfo = f"dbname={os.getenv('DB_NAME')} user={os.getenv('DB_TABLES_USER')} password={os.getenv('DB_TABLES_PASS')} host={os.getenv('DB_HOST')} connect_timeout=3"
 
+#------------------------DATA BASE RELATED FUNCTIONS------------------------
+#EITHER THEY FETCH OR COMMIT DATA FROM THE DATABASE TO THE APP OR VICE VERSA
+
 
 #Submit Sale is in charge of submitting all the info in the tables Sales, details_sales, pay sales. Therefore it updates the stock
 #Substracting the sold products
@@ -38,9 +41,21 @@ def SubmitSale(payment_cent, customer_def,  products_list, totalref_cent, rate_s
      return e
 
 
+# UNABLES a sale, this may be handy for returns, delete sales or anything.      
+def DeleteSale(sales_id):
+ try:
+    with psycopg.connect(conninfo) as conn:
+        with conn.cursor() as cur:
+
+            cur.execute(""" UPDATE sales
+                       SET is_active = false
+                       WHERE product_id= %s""", (sales_id, ))
+ except psycopg.OperationalError:
+    return
+
 #ESTA FUNCION DA EL CIERRE DE HOY
 #Devuelve todas las ventas y el cierre total. Da el cierre total.
-def GetDailyReport():
+def GetDailySales():
  try:
     with psycopg.connect(conninfo, row_factory=dict_row) as conn:
         with conn.cursor() as cur:
@@ -52,23 +67,36 @@ def GetDailyReport():
                         ORDER BY sales_id DESC
                         """)
             
-            datadicc=cur.fetchall()
+            return cur.fetchall()
 
-            if datadicc== None:
-                print("\n\tNo hay ventas.\n")                                  #ARREGLAR ESTA MIERDA!!!!!!!!
-                return
+ except psycopg.OperationalError as e:
+     return [] #RETURNS AN EMPTY LIST JUST IN CASE
+
+#GETS THE DAILY SALES TO MAKE UP TO THE TOTAL SALES 
+#Receive a dictionary list fetched from GetDailySales() it fetchs all the payments, and summarize all the sales to print the total amount
+# of gross sales daily. The result is fetched in total, float numbers and it returns empty values if not exist
+def makeDailyReport(dataDict):
+
+    if dataDict== None:                                #ARREGLAR ESTA MIERDA!!!!!!!! 
+                return                                 #que se supone que debo arreglar...?
             
-            float_total_day=0
-            float_bs=0
-            float_usd=0
+    float_total_day=0
+    float_bs=0
+    float_usd=0
 
-            for n in datadicc:
+    try:
+
+        with psycopg.connect(conninfo, row_factory=dict_row) as conn:
+          with conn.cursor() as cur:
+
+            for n in dataDict:
 
                 cur.execute(""" SELECT pay_sales.payment_cents, pay_sales.method_id
                             FROM pay_sales
                             WHERE sales_id= %s""", (n['sales_id'], ))
-                res=cur.fetchall()
-                for i in res:
+                
+                for i in cur.fetchall():
+
                     if i['method_id']==2 or i['method_id']==3 or i['method_id']==4:
                         
                         float_bs+=(float(i['payment_cents'])/100)
@@ -82,11 +110,12 @@ def GetDailyReport():
 
                 float_total_day+=n['sales_total_cent_usd']
 
-            return datadicc, round(float_total_day, 2), round(float_bs, 2), float_usd
- except psycopg.OperationalError as e:
-     return None, 0, 0, 0 #chequear la compatibilidad de esto
+            return float(round(float_total_day, 2)), float(round(float_bs, 2)), float_usd
 
-                
+    except psycopg.OperationalError as e:
+        return 0, 0, 0
+
+
 
 #ESTA FUNCION TE DEVUELVE TODAS LAS VENTAS HECHAS HISTORICAMENTE
 def ReadSales(page, quantity=50):
@@ -104,7 +133,7 @@ def ReadSales(page, quantity=50):
             
             return cur.fetchall()
  except psycopg.OperationalError:
-    return []
+    return [] #It returns an empty list just in case
         
 ##---IMPORTANTE---
 ##Debo aplicar un JOIN para sacar todos los datos de un solo golpe, ver como
@@ -127,11 +156,12 @@ def GetPay(sales_id):
             
             return cur.fetchall() 
  except psycopg.OperationalError:
-    return []
+    return [] #Returns an empty list just in case
 
 
 #Obtener los detalles de la venta.
 def GetDetails(sales_id):
+ try:
 
     with psycopg.connect(conninfo, row_factory=dict_row) as conn:
         with conn.cursor() as cur:
@@ -140,10 +170,47 @@ def GetDetails(sales_id):
                         JOIN products ON detail_sales.product_id=products.product_id
                         WHERE sales_id= %s """, (sales_id, ))
             
-            detalles=cur.fetchall()
-            return detalles
+            
+            return cur.fetchall()
+ except psycopg.OperationalError as e:
+    return [] #Returns an empty list just in case 
 
 
+#------------------------CLEANING INFO RELATED FUNCTIONS------------------------
+#FUNCTIONS TO USE WHEN PASSING AN ARGUMENT FROM ONE KIND OF VARIABLE TO ANOTHER TYPE
+#OR NOT RELATED TO DATA BASE
+
+#THIS FUNCTION TAKES ALL THE ARGUMENTS ON THE SALES DICCIONARIES FETCHED FROM DATABASE AND TURN THEM INTO FLOAT
+# VALUES: Rate, total on usd, change in bs, change in usd
+def turnIntoFloat(dataDictList):
+   for D in dataDictList:
+      
+      if D["sales_rate_cent_bs"]:
+            D["sales_rate_cent_bs"]/=100
+      else: 
+         D["sales_rate_cent_bs"]=0
+
+      if D["sales_total_cent_usd"] :
+            D["sales_total_cent_usd"] /=100
+      else: 
+         D["sales_total_cent_usd"]=0
+
+      if D["sales_change_cent_bs"] :
+            D["sales_change_cent_bs"] /=100
+      else: 
+         D["sales_change_cent_bs"]=0
+
+      if D["sales_change_cent_usd"] :
+            D["sales_change_cent_usd"] /=100
+      else: 
+         D["sales_change_cent_usd"]=0
+   
+   return dataDictList
+      
+      
+      
+   
+    
 def Create_Payment_Dicc(pay, id_method, value_usd_cent):
 
     payment={

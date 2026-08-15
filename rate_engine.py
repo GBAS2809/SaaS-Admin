@@ -43,10 +43,7 @@ def consulta_bcv():
 
     except requests.exceptions.RequestException as e: 
         #print(f"Problemas para acceder al servidor: {e}\n")
-        win=customtkinter.CTk()
-        win.title=("Error")
-        win.geometry("200x200")
-        win.mainloop()
+        #CLEAN AND VALIDATE ALL SCENARIOS WITH RESPECTIVE FEEDBACK IN THIS FILE
         return None
 
 
@@ -93,10 +90,8 @@ def obtener_euro_bcv():
 
     except Exception as e:
         #print(f"Error haciendo scraping al BCV: {e}")
-        win=customtkinter.CTk()
-        win.title=("!Error")
-        win.geometry("200x200")
-        win.mainloop()
+        #okay manejar mejor las excepciones aqui está el maldito bug del código. 
+        #CLEAN AND VALIDATE ALL SCENARIOS WITH RESPECTIVE FEEDBACK IN THIS FILE
         return None
 
 # Prueba

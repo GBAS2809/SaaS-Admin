@@ -6,7 +6,9 @@ load_dotenv()
 
 conninfo = f"dbname={os.getenv('DB_NAME')} user={os.getenv('DB_TABLES_USER')} password={os.getenv('DB_TABLES_PASS')} host={os.getenv('DB_HOST')} connect_timeout=3"
 
+#TO DO:
 #DEBO HACER UNA FUNCION CHECKSTOCK para hacer saltar una notificación en caso del que producto se acabe.
+# ROW 64: ADD A LIMITATION FOR THE RESULTS FETCHED TO ONLY 10-5 RESULTS
 
 # AddProducts commits all the data to the database from a dictionary.
 def AddProduct(product_dict):
@@ -50,7 +52,23 @@ def EditProduct(product_dict, product_id):
  except psycopg.OperationalError as e:
      return []
      
+def SearchProducts(searchString):
+   try:
+      with psycopg.connect(conninfo, row_factory=dict_row) as conn:
+         with conn.cursor() as cur:
 
+            cur.execute(""" SELECT product_id, product_name, product_price
+            FROM products
+            where LOWER(product_name) LIKE %s
+            """, (f"%{searchString}%" , ))
+
+            return cur.fetchall()
+          #DEBERÍA PONER UN LÍMITE EN EL NÚMERO DE RESULTADOS QUE ME ESCUPE PARA NO CONSUMIR 1000 RECURSOS CUANDO UNA SOLA LETRA COINCIDA Y HAYAN 1000 PRODUCTOS
+         
+   except psycopg.OperationalError:
+      return
+      
+      
 
 # Deletes a product from the frontend. It only turns is_active to false            
 def DeleteProduct(product_id):
@@ -99,7 +117,7 @@ def IsDeleted(product_id):
  except psycopg.OperationalError as e:
     return None
             
-# Fetch every item from the invetory, I have to add a pagination.
+# Fetch every item from the inventory, Pagination added.
 def ReadProducts(page, quantity=100):
  offset=(page-1)*100
  try:
@@ -115,7 +133,7 @@ def ReadProducts(page, quantity=100):
 
             return cur.fetchall()
  except psycopg.OperationalError as e:
-    return []
+    return [] ,str(e)
 
 #    *Cleans all the data before fetching into the database 
 def cleanProductDB(entryDataList):

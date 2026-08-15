@@ -105,16 +105,20 @@ def PrintSales(sales):
     print(f"""\n--\tID venta: {n['sales_id']}\t{n['sales_day']}\t{n['sales_rate_cent_bs']}\n
           Total: {n['sales_total_cent_usd']}$\tVuelto: {n['sales_change_cent_usd']}$, Bs. {n['sales_change_cent_bs']}\n 
           """)
+def printraw(details, payments):
+  print(f"DETALLES:\n{details}\n\nPAGOS:{payments}")
+
 
 def PrintDetails(details, payments):
 
   print("\n\t---Metodos de pago---")
   for n in payments:
        print(f"""\n\t{n['method_name']}:\t{n['payment_cents']/100}""")
-       print("\n\t---Productos Vendidos---\n\tProducto\tCant.\tPrecio Uni.\tTotal")
+
+  print("\n\t---Productos Vendidos---\n\tProducto\tCant.\tPrecio Uni.\tTotal")
   for n in details:
        print(f"""\n\t{n['product_name']}\t {n['number_sold']} X {n['product_price']/100}\t{n['number_sold']*(n['product_price']/100)}""")
-       pauseclean()
+  pauseclean()
 
 def PrintDailyReport(salesDiccList, float_totalsold, float_bs, float_usd):
   print("\n\t------REPORTE DIARIO------")
@@ -140,7 +144,7 @@ def clean():
 from local_db_functions import TablesIntegrity,  InsertMethods
 from cust_db_functions import AddCustomer, GetCustomer
 from crud_products import AddProduct, EditProduct, DeleteProduct, ReadProducts, IsDeleted
-from sales_functions import ReadSales, SubmitSale, GetPay, GetDetails, MakeDictSale, CleanSale, GetDailyReport
+from sales_functions import ReadSales, SubmitSale, GetPay, GetDetails, MakeDictSale, CleanSale, makeDailyReport, GetDailySales
 from functions_terminal import  AskProduct, AskID, MakeDictProduct_DB, AskPayment , AskCustomerForTerminal, AskSale, TurnIntoFloat
 from rate_engine import GetRates
 
@@ -190,7 +194,7 @@ while True:
      print("Valor invalido\n")
  while OP==4:
    
-   salesDiccList, float_totalsold, float_bs, float_usd=GetDailyReport()
+   salesDiccList, float_totalsold, float_bs, float_usd=makeDailyReport(GetDailySales())
    if salesDiccList!=None:
      PrintDailyReport(salesDiccList, float_totalsold, float_bs, float_usd)
      
@@ -225,6 +229,7 @@ while True:
    print("\n\t\t---LIBRO DIARIO---\n")
    print("\n\t\t---Página ---\n")
 
+   
    PrintSales(MakeDictSale(ReadSales(page)))
    
    while True:
@@ -251,7 +256,8 @@ while True:
      payments=GetPay(id)
      details=GetDetails(id)
      PrintDetails(details, payments)
-
+     #printraw(details, payments)
+     pauseclean()
      
 
    elif det==2:
