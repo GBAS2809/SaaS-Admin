@@ -1017,15 +1017,7 @@ class App(customtkinter.CTk):
             self.addProdWin.lift()          # Trae al frente si ya existía
             self.addProdWin.focus_force()   # Fuerza el foco de inmediato
     
-    def openWinSell(self):
-         if self.addSaleWin is None or not self.addSaleWin.winfo_exists():
-              self.addSaleWin= Win_NewSale(self)
-              self.addSaleWin.after(100, self.addSaleWin.lift)        # Fuerza a subir en la pila de ventanas
-              self.addSaleWin.after(200, self.addSaleWin.focus_force) # Fuerza el foco del sistema operativo
-         else: 
-              self.addSaleWin.lift()          # Trae al frente si ya existía
-              self.addSaleWin.focus_force()   # Fuerza el foco de inmediato
-
+   
 if __name__=="__main__":
  
 
