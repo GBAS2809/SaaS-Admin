@@ -158,7 +158,16 @@ def GetPay(sales_id):
  except psycopg.OperationalError:
     return [] #Returns an empty list just in case
 
-
+def getLastIDSales():
+   try: 
+         with psycopg.connect(conninfo, row_factory=dict_row) as conn:
+            with conn.cursor() as cur:
+               cur.execute(""" SELECT MAX(sales_id) FROM sales""" )
+               
+               return cur.fetchone()
+   except psycopg.OperationalError as e:
+         return 0
+   
 #Obtener los detalles de la venta.
 def GetDetails(sales_id):
  try:

@@ -8,14 +8,24 @@
 # Optimizar las funciones de crud_products, rate_engine, cust_db_functions, sales_functions
 # dar listas vacias y valores válidos en caso de error
 # ADD A NEW COLUMN is_active on sales table
+# * Hacer el frame de operacion de venta.
+# * Por último la opción de cerrar el día. 
+# * Validar los limites de los distintos frames para scrollear. 
 
 #DOING RN: 
-# * Hacer el frame de operacion de venta.
 
 #TODO: 
 # * IMPORTANTE: 
-# * Validar los limites de los distintos frames para scrollear.
-# * Por último la opción de cerrar el día. 
+
+# * The display new sale is a mess I need to comment the code, organize it and see if I can improve it in any way
+# * Better still check the rate related functions and test them under any possible scenario
+# * STILL have to get some limits on the scrollable frames of product and sales.
+# * Also the details of the sales prints as ints not floats.
+# * Daily report doesnt summarize all sales and it´s bit confusing to read.
+# * I have a fucking floating point bug on the display new sales when I pay on dollars then bs. GET RID OF IT
+# *
+#    
+
 
 
 
@@ -43,9 +53,9 @@ project_root=actual_path.parents[1]
  #inyecta la ruta en el inicio del sistema de py
 sys.path.insert(0, str(project_root))
 
-from crud_products import ReadProducts, AddProduct, cleanProductDB, EditProduct, getProduct, DeleteProduct, SearchProducts
+from crud_products import ReadProducts, AddProduct, cleanProductDB, EditProduct, getProduct, DeleteProduct, SearchProducts, getLastIDProducts
 from functions_terminal import TurnIntoFloat
-from sales_functions import ReadSales, MakeDictSale, GetPay, GetDetails, makeDailyReport, GetDailySales, SubmitSale
+from sales_functions import ReadSales, MakeDictSale, GetPay, GetDetails, makeDailyReport, GetDailySales, SubmitSale, getLastIDSales
 from cust_db_functions import GetCustomer, AddCustomer
 from rate_engine import GetRates
  #los widgets entry y textbox son bidireccionales, el usuario puede interactuar con ellos
@@ -335,17 +345,6 @@ class Win_DetailedSale(customtkinter.CTkToplevel):
             self.genericL=customtkinter.CTkLabel(self, text=f"{pay["payment_cents"]}")
             self.genericL.grid(column=3, row=i+len(products_list)+3, padx=10, pady=(10, 0), sticky="ew")
 
-#Esta otra tendrá un clase en donde podras agregar/modificarás las ventas.  Debo buscar la manera de mitigar el error humano   
-class Win_NewSale(customtkinter.CTkToplevel):
-     def __init__(self, master):
-          super().__init__()
-          self.geometry("500x500")
-
-          self.title=customtkinter.CTkLabel(self, text="Ingrese los datos de la venta")
-          self.title.grid(column=0, row=0, padx=10, pady=(10,0), sticky="ew")
-
-
-
 #Display inventory is a frame that displays all products on inventory, paged. It holds the labels and the scrollable frame class.
 
 class DisplayInventory(customtkinter.CTkScrollableFrame):
@@ -356,6 +355,12 @@ class DisplayInventory(customtkinter.CTkScrollableFrame):
       self.lista=[]
       self.messageWin=None
       self.lista=(TurnIntoFloat(ReadProducts(page)))
+
+      aux=getLastIDProducts()
+      self.page_limit=aux["max"]/50 #debo aplicar un limite para las ventas pidele a una funcion del backend
+      self.page_limit=int(self.page_limit) + (self.page_limit % 1 > 0)
+      
+      
 
       if self.lista==[]:
           if self.messageWin==None or not self.messageWin.winfo_exists():
@@ -383,8 +388,13 @@ class DisplayInventory(customtkinter.CTkScrollableFrame):
           self.addbutton.grid(column=0, row=1, padx=10, pady=(10,0),columnspan=6, sticky="ew")
 
           self.left=customtkinter.CTkButton(self, text="<", command=self.displayleft)
+          if self.actual_page==1:
+               self.left.configure(state="disabled")
           self.left.grid(column=0, row=2, padx=0, pady=(10, 0), columnspan=3, sticky="ew")
+
           self.right=customtkinter.CTkButton(self, text=">", command=self.displayright)
+          if self.actual_page==self.page_limit:
+                self.right.configure(state="disabled")
           self.right.grid(column=3, row=2, padx=0, pady=(10, 0) , columnspan=3, sticky="ew")
 
           self.header_1=customtkinter.CTkLabel(self, text="Productos")
@@ -418,12 +428,16 @@ class DisplayInventory(customtkinter.CTkScrollableFrame):
 
 
      def displayleft(self):
+                   self.right.configure("normal")
+                   
                    if self.actual_page>1:
                        self.actual_page-=1
                        self.master_reference.UpdateFrameInventory(self.actual_page)
                        
      def displayright(self):
-                   if self.actual_page<5:
+                   self.left.configure("normal")
+
+                   if self.actual_page<self.page_limit:
                        self.actual_page+=1
                        self.master_reference.UpdateFrameInventory(self.actual_page)
      
@@ -445,6 +459,9 @@ class DisplaySales(customtkinter.CTkScrollableFrame):
       super().__init__(master)
       self.messageWin=None
 
+      self.grid_columnconfigure((1, 2, 3, 4), weight=1)
+      self.grid_columnconfigure((0,5), weight=0)
+
       self.lista=(MakeDictSale(ReadSales(page)))
       if self.lista==[]:
           if self.messageWin==None or self.messageWin.winfo_exists():
@@ -459,39 +476,59 @@ class DisplaySales(customtkinter.CTkScrollableFrame):
       else:
 
           self.actual_page=page
+          self.page_limit=0
 
           self.master_reference=master
 
-          self.page_limit=self.lista[0]["sales_id"]/100 #debo aplicar un limite para las ventas pidele a una funcion del backend
+          
+          aux=getLastIDSales()
+          self.page_limit=aux["max"]/50 #debo aplicar un limite para las ventas pidele a una funcion del backend
+          self.page_limit=int(self.page_limit) + (self.page_limit % 1 > 0)
+          #print(self.page_limit)
           #pida la ultima linea y me la devuelva
-
-          self.grid_columnconfigure((1, 2, 3), weight=2)
-          self.grid_columnconfigure((0), weight=1)
+          
+          
 
           
           self.lista_label=[]
 
           self.title=customtkinter.CTkLabel(self, text=title, fg_color="gray30", corner_radius=0, width=100, compound="top", justify="center")
-          self.title.grid(column=0, row=0, padx=0, pady=(10, 0), columnspan=4, sticky="ew")
+          self.title.grid(column=0, row=0, padx=0, pady=(10, 0), columnspan=6, sticky="ew")
 
           self.left=customtkinter.CTkButton(self, text="<", command=self.displayleft)
-          self.left.grid(column=0, row=1, padx=0, pady=(10, 0), columnspan=2, sticky="ew")
+          if self.actual_page==1:
+               self.left.configure(state="disabled")
+          
+          self.left.grid(column=0, row=1, padx=0, pady=(10, 0), columnspan=3, sticky="ew")
+          
           self.right=customtkinter.CTkButton(self, text=">", command=self.displayright)
-          self.right.grid(column=2, row=1, padx=0, pady=(10, 0) , columnspan=2, sticky="ew")
+          if self.actual_page==self.page_limit:
+               self.right.configure(state="disabled")
+          self.right.grid(column=3, row=1, padx=0, pady=(10, 0) , columnspan=3, sticky="ew")
+
+
+          self.header_5=customtkinter.CTkLabel(self, text= "   ")
+          self.header_5.grid(column=0, row=3, padx=15, pady=(10, 0), sticky="ew") 
 
           self.header_1=customtkinter.CTkLabel(self, text="Fecha")
-          self.header_1.grid(column=0, row=2, padx=10, pady=(10,0), sticky="ew" )
-          self.header_2=customtkinter.CTkLabel(self, text="Número de venta")
-          self.header_2.grid(column=1, row=2, padx=10, pady=(10, 0), sticky="ew")
+          self.header_1.grid(column=1, row=2, padx=10, pady=(10,0), sticky="ew" )
+
           self.header_3=customtkinter.CTkLabel(self, text= "Total referenciado")
           self.header_3.grid(column=2, row=2, padx=15, pady=(10, 0), sticky="ew")
+
           self.header_4=customtkinter.CTkLabel(self, text= "Vueltos")
           self.header_4.grid(column=3, row=2, padx=15, pady=(10, 0), sticky="ew")
+
+          self.header_2=customtkinter.CTkLabel(self, text="Tasa en Bs.")
+          self.header_2.grid(column=4, row=2, padx=10, pady=(10, 0), sticky="ew")
+
+          self.header_6=customtkinter.CTkLabel(self, text= "\t")
+          self.header_6.grid(column=5, row=3, padx=15, pady=(10, 0), sticky="ew")
 
           for i, sale in enumerate(self.lista):
                
                self.button=customtkinter.CTkButton(self, command=lambda pid=sale["sales_id"]:self.getDetailedSale(pid), text="", width=30 )
-               self.button.grid(row=i+3, column=0,padx=10, pady=(10,0), sticky="ew")
+               self.button.grid(row=i+3, column=0 ,padx=10, pady=(10,0), sticky="ew")
           
                self.date_label=customtkinter.CTkLabel(self, text=(f" {sale["sales_day"]}"), justify="left", compound="left")
                self.date_label.grid(row=i+3, column=1, padx=10, pady=(10,0), sticky="ew")
@@ -501,17 +538,27 @@ class DisplaySales(customtkinter.CTkScrollableFrame):
 
                self.change_label=customtkinter.CTkLabel(self, text=(f"Bs. {sale["sales_change_cent_bs"]}\t Usd. {sale["sales_change_cent_bs"]} "))
                self.change_label.grid(row=i+3, column=3, padx=10, pady=(10,0 ), sticky="ew")
-               
-     
+
+               self.rateLabel=customtkinter.CTkLabel(self, text=f"Bs. {(sale["sales_rate_cent_bs"])}")
+               self.rateLabel.grid(row=i+3, column=4, padx=10, pady=(10,0 ), sticky="ew")
+
+               self.ID=customtkinter.CTkLabel(self, text=sale["sales_id"])
+               self.ID.grid(row=i+3, column=5, padx=10, pady=(10,0 ), sticky="ew")
+
+
      def displayleft(self):
+          
+          self.right.configure("normal")
           if self.actual_page>1:
               self.actual_page-=1
               self.master_reference.UpdateFrameSales( self.actual_page)
      
      def displayright(self):
-         if self.actual_page<5:
+         self.left.configure("normal")
+         if self.actual_page<self.page_limit:
           self.actual_page+=1
           self.master_reference.UpdateFrameSales( self.actual_page) #debo encontrar una manera de marcar un limite
+
 
      def getDetailedSale(self, pid):
          try:
@@ -520,7 +567,7 @@ class DisplaySales(customtkinter.CTkScrollableFrame):
              self.DetailedWin.after(200, self.DetailedWin.focus_force)
 
          except Exception as e:
-            print(e)
+            #print(e)
             self.messageWin=Win_Message(self, "ERROR", str(e))
             self.messageWin.after(100, self.messageWin.lift)
             self.messageWin.after(200, self.messageWin.focus_force)
@@ -659,7 +706,7 @@ class DisplayNewSale(customtkinter.CTkFrame):
 
                           self.total_usd+=label["product_price"]*label["number_sold"]
 
-         self.total_bs=round(self.rate*self.total_usd, 2)
+         self.total_bs=round(float(self.rate*self.total_usd), 2)
          self.totalref_cent=int(round(float(self.total_usd)*100))
          self.total_usdLabel.configure(text=f"Ref.{self.total_usd} \tBs {self.total_bs}")
 

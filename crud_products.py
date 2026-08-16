@@ -33,9 +33,18 @@ def getProduct(pid):
             
             return cur.fetchone()
    except psycopg.OperationalError as e:
-      return None
+      return []
 
-
+def getLastIDProducts():
+   try: 
+         with psycopg.connect(conninfo, row_factory=dict_row) as conn:
+            with conn.cursor() as cur:
+               cur.execute(""" SELECT MAX(product_id) FROM products""" )
+               
+               return cur.fetchone()
+   except psycopg.OperationalError as e:
+         return 0
+   
 # Updates the data of a product from a dictionary.
 def EditProduct(product_dict, product_id):
  try:
