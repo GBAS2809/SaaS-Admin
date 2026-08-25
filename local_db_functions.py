@@ -20,7 +20,9 @@ def TablesIntegrity():
                         type_document CHARACTER(1) NOT NULL,
                         id_document INTEGER NOT NULL UNIQUE,
                         name_customer TEXT NOT NULL,
-                        address VARCHAR(60))""")
+                        address VARCHAR(60)),
+                        email VARCHAR(60),
+                        phone_number INTEGER""")
             
             #Products holds price, cost, stock, demand on week, and barcode 
             cur.execute("""

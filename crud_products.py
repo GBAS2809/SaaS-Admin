@@ -68,7 +68,8 @@ def SearchProducts(searchString):
 
             cur.execute(""" SELECT product_id, product_name, product_price
             FROM products
-            where LOWER(product_name) LIKE %s
+            WHERE LOWER(product_name) LIKE %s
+            AND is_active=true
             """, (f"%{searchString}%" , ))
 
             return cur.fetchall()

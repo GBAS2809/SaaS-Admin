@@ -34,9 +34,9 @@ def AddCustomer(customer_dict):
     with psycopg.connect(conninfo) as conn:
         with conn.cursor() as cur:
 
-            cur.execute("""INSERT INTO customers(id_document, name_customer, type_document, address)
-                   VALUES ( %s, %s, %s, %s)
-                   """,( customer_dict['id_document'], customer_dict['name_customer'], customer_dict['type_document'], customer_dict['address']))
+            cur.execute("""INSERT INTO customers(id_document, name_customer, type_document, address, email, phone_number)
+                   VALUES ( %s, %s, %s, %s, %s, %s)
+                   """,( customer_dict['id_document'], customer_dict['name_customer'], customer_dict['type_document'], customer_dict['address'], customer_dict["email"], customer_dict["phone_number"]))
  except psycopg.OperationalError as e:
     return
 

@@ -127,6 +127,7 @@ def ReadSales(page, quantity=50):
             cur.execute("""SELECT sales.sales_day, sales.sales_id, sales.sales_rate_cent_bs, sales.sales_total_cent_usd,
                         sales.sales_change_cent_bs, sales.sales_change_cent_usd
                         FROM sales
+                        WHERE is_active = true
                         ORDER BY sales_id DESC
                         LIMIT %s OFFSET %s
                         """, (quantity, offset))
