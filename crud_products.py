@@ -143,7 +143,7 @@ def ReadProducts(page, quantity=100):
 
             return cur.fetchall()
  except psycopg.OperationalError as e:
-    return [] ,str(e)
+    return []
 
 #    *Cleans all the data before fetching into the database 
 def cleanProductDB(entryDataList):

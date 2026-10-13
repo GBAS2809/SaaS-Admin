@@ -79,6 +79,8 @@ from functions_terminal import TurnIntoFloat
 from sales_functions import ReadSales, MakeDictSale, GetPay, GetDetails, makeDailyReport, GetDailySales, SubmitSale, getLastIDSales
 from cust_db_functions import GetCustomer, AddCustomer
 from rate_engine import GetRates
+from widgets import FloatSpinbox, IntSpinbox
+import json
 
 #--------------------------------- WINDOW CLASSES ---------------------------------
 # All clases related to windows, most auxiliar or helpful but not intothe main mainstream of flow information
@@ -86,36 +88,6 @@ from rate_engine import GetRates
 
 #Okay, let´s try to fucking comment this shit in one single language as well
 
-#This is my class for the main menu left option bar
-class Win_Options(customtkinter.CTkFrame):
-    def __init__(self, master, title):
-        super().__init__(master)
-
-        options=[
-             ("Nueva venta", self.master.DrawNewSale),
-             ("Mi inventario", self.master.DrawInventory), 
-             ("Mi Libro Diario", self.master.DrawSales),
-             ("Reporte del día", self.master.DrawDailyReport),
-                 #("Configuración", self.master.) #we´ve got todo something with configurations
-        ]
-
-        self.frame_display=0 # doesn´t print any of the options
-
-        self.title=customtkinter.CTkLabel(self, text=title)
-        self.title.grid(column=0, row=0, padx=10, pady=(10,0),sticky="ew")
-
-        for i, button in enumerate(options):
-            gen_button=customtkinter.CTkButton(self, text=button[0], command=button[1], font=("font39", 20))
-            gen_button.grid(column=0, row=i+1, padx=10, pady=(10, 0), sticky="ew")
-
-        self.rate=customtkinter.CTkLabel(self, text="Tasas")
-        self.rate.grid(column=0, row=len(options)+2, padx=10, pady=(10, 0))
-        self.date=customtkinter.CTkLabel(self, text="")
-        self.date.grid(column=0, row=len(options)+3, padx=10 , pady=(10,0))
-        self.BCV_label=customtkinter.CTkLabel(self, text="")
-        self.BCV_label.grid(column=0, row=len(options)+4, padx=10 , pady=(10,0))
-        self.EUR_label=customtkinter.CTkLabel(self, text="")
-        self.EUR_label.grid(column=0, row=len(options)+5, padx=10 , pady=(10,0))
 
         
 
@@ -132,6 +104,9 @@ class Win_Message(customtkinter.CTkToplevel):
          self.message=customtkinter.CTkLabel(self, text=text)
          self.message.pack(padx=20, pady=20)
 
+
+    
+     
 #---------------------- WINDOW MODIFY PRODUCT CLASS ----------------------
 #This class contains the window where you modify the values of an existing product. 
 # It´s vulnerable since it only acepts dictionary info in a certain way. 
@@ -381,6 +356,135 @@ class Win_DetailedSale(customtkinter.CTkToplevel):
 # Them hold the functions of the main options displaying, sales and inventory
 # DisplayInventory, DisplaySales, DisplayNewSale, DisplayDailyReport
 
+#This is my class for the main menu left option bar
+class DisplayOptions(customtkinter.CTkFrame):
+    def __init__(self, master, title):
+        super().__init__(master)
+        self.ref=master
+
+        
+
+        options=[
+             ("Nueva venta", self.ref.DrawNewSale),
+             ("Mi inventario", self.ref.DrawInventory), 
+             ("Mi Libro Diario", self.ref.DrawSales),
+             ("Reporte del día", self.ref.DrawDailyReport),
+            ("Configuración", self.ref.DrawOptions) #we´ve got todo something with configurations
+        ]
+
+        self.frame_display=0 # doesn´t print any of the options
+
+        self.title=customtkinter.CTkLabel(self, text=title)
+        self.title.grid(column=0, row=0, padx=10, pady=(10,0),sticky="ew")
+
+        for i, button in enumerate(options):
+            gen_button=customtkinter.CTkButton(self, text=button[0], command=button[1], font=("font39", 20))
+            gen_button.grid(column=0, row=i+1, padx=10, pady=(10, 0), sticky="ew")
+
+        self.rate=customtkinter.CTkLabel(self, text="Tasas")
+        self.rate.grid(column=0, row=len(options)+2, padx=10, pady=(10, 0))
+        self.date=customtkinter.CTkLabel(self, text="")
+        self.date.grid(column=0, row=len(options)+3, padx=10 , pady=(10,0))
+        self.BCV_label=customtkinter.CTkLabel(self, text="")
+        self.BCV_label.grid(column=0, row=len(options)+4, padx=10 , pady=(10,0))
+        self.EUR_label=customtkinter.CTkLabel(self, text="")
+        self.EUR_label.grid(column=0, row=len(options)+5, padx=10 , pady=(10,0))
+
+
+#---------------------- DISPLAY CONFIGURATION FRAME ----------------------
+#will hold the option to change rates, time and date manually I guess.
+# set a default minimun ofr new merchandise, maybe language?
+class DisplayConfiguration(customtkinter.CTkFrame):
+      def __init__(self, master):
+            super().__init__(master)
+
+            self.masterRef=master
+
+            data_jsonfile=self.getLocalConfig()
+
+            if not data_jsonfile: #set a default configuration
+             self.title=customtkinter.CTkLabel(self, text="Configuraciones")
+             self.title.grid(column=0, row=0,columnspan=3)
+
+             self.DefaultRateLabel=customtkinter.CTkLabel(self, text="Tasa predeterminada")
+             self.DefaultRateLabel.grid( column=0, row=1)
+
+             self.DefaultRateBox=customtkinter.CTkComboBox(self, values=["BCV", "Euro","Promedio", "Personalizada"], command=self.defineRate)
+             self.DefaultRateBox.grid( column=1, row=1)
+
+             self.DefaultMinimumLabel=customtkinter.CTkLabel(self, text="Minimo de mercancia")
+             self.DefaultMinimumLabel.grid(column=0, row=2)
+            
+             self.DefaultMinimumBox=FloatSpinbox(self, step_size=1)
+             self.DefaultMinimumBox.set(1)
+             self.DefaultMinimumBox.grid(column=1, row=2)
+
+             self.saveMin=customtkinter.CTkButton(self, text="Guardar", command=self.updateLocalConfig)#poner el comando que va a dar
+             self.saveMin.grid(column=1, row=3)
+
+            if data_jsonfile: #insert saved values in the labels
+                  
+                  self.title=customtkinter.CTkLabel(self, text="Configuraciones")
+                  self.title.grid(column=0, row=0,columnspan=3)
+                  
+                  self.DefaultRateLabel=customtkinter.CTkLabel(self, text="Tasa predeterminada")
+                  self.DefaultRateLabel.grid( column=0, row=1)
+                  
+                  self.DefaultRateBox=customtkinter.CTkComboBox(self, values=["BCV", "Euro","Promedio", "Personalizada"], command=self.defineRate, )
+                  self.DefaultRateBox.set(data_jsonfile["Default_rate"])
+                  self.DefaultRateBox.grid( column=1, row=1)
+                  
+                  self.DefaultMinimumLabel=customtkinter.CTkLabel(self, text="Minimo de mercancia")
+                  self.DefaultMinimumLabel.grid(column=0, row=2)
+                  
+                  
+                  self.DefaultMinimumBox=FloatSpinbox(self, step_size=1)
+                  self.DefaultMinimumBox.set(data_jsonfile["Min_stock"])
+                  self.DefaultMinimumBox.grid(column=1, row=2)
+                  
+                  self.saveMin=customtkinter.CTkButton(self, text="Guardar", command=self.updateLocalConfig)#poner el comando que va a dar
+                  self.saveMin.grid(column=1, row=3)
+                  
+       
+      def defineRate(self, value):
+            if value== "Euro":
+                  self.masterRef.defaultRate=self.masterRef.teuro
+            if value== "BCV":
+                  self.masterRef.defaultRate=self.masterRef.tbcv_dia
+                  
+            if value== "Promedio":
+                  self.masterRef.defaultRate=self.masterRef.tprm_dia
+                  
+            if value== "Personalizada":
+                  
+                  self.masterRef.defaultRate=1000 #add and entry for the user to change the rate manually
+            #print(self.masterRef.defaultRate)
+
+      def getLocalConfig(self):
+            try:
+                  with open("local_Variables.json", "r") as filer:
+                        datos=json.load(filer)
+                  return datos
+            except FileNotFoundError:
+                  return
+                  #raise exception
+            
+      def updateLocalConfig(self):
+            
+            self.datos_json={
+                  "Default_rate": str(self.DefaultRateBox.get().strip()),
+                  "Min_stock": int(round(float(str(self.DefaultMinimumBox.get())), ))
+            }
+
+            with open ("local_Variables.json", "w") as file:
+                  json.dump(self.datos_json, file, indent=4)
+                  
+                  
+
+#tbcv_dia, tpll_dia, tprm_dia,teuro
+
+            
+
 #---------------------- DISPLAY INVENTORY FRAME ----------------------
 #Display inventory is a frame that displays all products on inventory, paged.
 #  It holds the labels and the scrollable frame class.
@@ -392,12 +496,7 @@ class DisplayInventory(customtkinter.CTkFrame):
       self.lista=[]
       self.messageWin=None
       self.lista=(TurnIntoFloat(ReadProducts(page)))
-
-      aux=getLastIDProducts()
-      self.page_limit=aux["max"]/50 #debo aplicar un limite para las ventas pidele a una funcion del backend
-      self.page_limit=int(self.page_limit) + (self.page_limit % 1 > 0)
-      
-      
+      self.page_limit=0
 
       if self.lista==[]:
           if self.messageWin==None or not self.messageWin.winfo_exists():
@@ -409,17 +508,22 @@ class DisplayInventory(customtkinter.CTkFrame):
                self.messageWin.lift
                self.messageWin.focus_force
       else:
+          
+          aux=getLastIDProducts()
+          if not aux:
+               aux=0
+          else:
+           self.page_limit=aux["max"]/50 
+           self.page_limit=int(self.page_limit) + (self.page_limit % 1 > 0)
 
           self.grid_columnconfigure((1, 2, 3, 4), weight=1)
-          self.grid_columnconfigure((0,5), weight=0)
+          self.grid_columnconfigure((0, 5), weight=0)
           self.rowconfigure(5, weight=1)
 
           self.lista_label=[]
           self.actual_page=page
-
           self.master_reference=master
 
-          
 
           self.title=customtkinter.CTkLabel(self, text=title, fg_color="gray30", corner_radius=0, width=100, compound="top", justify="center")
           self.title.grid(column=0, row=0, padx=0, pady=(10, 0), columnspan=6, sticky="ew")
@@ -427,20 +531,22 @@ class DisplayInventory(customtkinter.CTkFrame):
           self.addbutton=customtkinter.CTkButton(self, text="Añadir Producto", command=self.master_reference.openWinProd)
           self.addbutton.grid(column=0, row=1, padx=10, pady=(10,0),columnspan=6, sticky="ew")
 
-          self.searchentry=customtkinter.CTkEntry( self, placeholder_text="Buscar producto en el inventario.", height=30, font=("font39", 25) )
-          self.searchentry.bind("<KeyRelease>", self.SearchProduct)
-          self.searchentry.grid(column=0, row=2, padx=10, pady=(10,0),columnspan=6, sticky="ew")
-
           self.left=customtkinter.CTkButton(self, text="<", command=self.displayleft)
           if self.actual_page==1:
                self.left.configure(state="disabled")
-          self.left.grid(column=0, row=3, padx=0, pady=(10, 0), columnspan=3, sticky="ew")
+          self.left.grid(column=0, row=2, padx=0, pady=(10, 0), columnspan=3, sticky="ew")
 
           self.right=customtkinter.CTkButton(self, text=">", command=self.displayright)
           if self.actual_page==self.page_limit:
                 self.right.configure(state="disabled")
-          self.right.grid(column=3, row=3, padx=0, pady=(10, 0) , columnspan=3, sticky="ew")
+          self.right.grid(column=3, row=2, padx=0, pady=(10, 0) , columnspan=3, sticky="ew")
 
+          self.searchentry=customtkinter.CTkEntry( self, placeholder_text="Buscar producto en el inventario.", height=30, font=("font39", 25) )
+          self.searchentry.bind("<KeyRelease>", self.SearchProduct)
+          self.searchentry.grid(column=0, row=3, padx=10, pady=(10,0),columnspan=6, sticky="ew")
+
+          self.header_0=customtkinter.CTkLabel(self, width=30)
+          self.header_0.grid(column=0, row=4, padx=15, pady=(10, 0), sticky="ew")
           self.header_1=customtkinter.CTkLabel(self, text="Productos")
           self.header_1.grid(column=1, row=4, padx=15, pady=(10, 0), sticky="ew")
           self.header_2=customtkinter.CTkLabel(self, text= "Stock")
@@ -449,31 +555,47 @@ class DisplayInventory(customtkinter.CTkFrame):
           self.header_3.grid(column=3, row=4, padx=15, pady=(10, 0), sticky="ew")
           self.header_4=customtkinter.CTkLabel(self, text= "Valor bruto total")
           self.header_4.grid(column=4, row=4, padx=15, pady=(10, 0), sticky="ew")
-          self.header_5=customtkinter.CTkLabel(self, text= "   ")
+          self.header_5=customtkinter.CTkLabel(self, width=30)
           self.header_5.grid(column=5, row=4, padx=15, pady=(10, 0), sticky="ew")
 
+
+
           self.results_frame = customtkinter.CTkScrollableFrame(self)
-          self.results_frame.grid_columnconfigure((0, 1, 2, 3, 4, 5), weight=1)
+          self.results_frame.grid_columnconfigure(( 1, 2, 3, 4), weight=1)
+          self.results_frame.grid_columnconfigure((0, 5), weight=0)
+          self.BuildFrame()
           self.results_frame.grid(row=5, column=0, padx=10, pady=(10,0), sticky="nsew", columnspan=6)
 
-          for i, prod in enumerate(self.lista):
+          
+     def BuildFrame(self):
+           for i, prod in enumerate(self.lista):
+           
+                          self.button=customtkinter.CTkButton(self.results_frame, text="", command=lambda pid=prod["product_id"] : self.modProduct(pid), width=30)
+                          self.button.grid(row=i, column=0, padx=10, pady=(10,0), sticky="ew")
+                          if prod["product_stock"]<=0:
+                                self.button.configure(fg_color="red", hover_color="#b00000")
+           
+                          self.labelProductName=customtkinter.CTkLabel(self.results_frame, text=prod["product_name"], justify="left", compound="left")
+                          self.labelProductName.grid(row=i, column=1, padx=10, pady=(10,0), sticky="ew")
+                          
+                          self.labelStock=customtkinter.CTkLabel(self.results_frame, text=str(prod["product_stock"]))
+                          self.labelStock.grid(row=i, column=2,padx=10, pady=(10,0), sticky="ew" )
+           
+                          self.labelProdprice=customtkinter.CTkLabel(self.results_frame, text=str(prod["product_price"]), justify="left", compound="left")
+                          self.labelProdprice.grid(row=i, column=3, padx=10, pady=(10,0), sticky="ew")
+           
+                          self.labelTotalNet=customtkinter.CTkLabel(self.results_frame, text=f"{float(prod['product_price'])*float(prod['product_stock'])}$", justify="left", compound="left")
+                          self.labelTotalNet.grid(row=i, column=4, padx=10, pady=(10,0), sticky="ew")
 
-               self.button=customtkinter.CTkButton(self.results_frame, text="", command=lambda pid=prod["product_id"] : self.modProduct(pid), width=30)
-               self.button.grid(row=i, column=0, padx=10, pady=(10,0), sticky="ew")
-
-               self.texto=customtkinter.CTkLabel(self.results_frame, text=prod["product_name"], justify="left", compound="left")
-               self.texto.grid(row=i, column=1, padx=10, pady=(10,0), sticky="ew")
-               
-               self.stock=customtkinter.CTkLabel(self.results_frame, text=str(prod["product_stock"]))
-               self.stock.grid(row=i, column=2,padx=10, pady=(10,0), sticky="ew" )
-
-               self.justify=customtkinter.CTkLabel(self.results_frame, text=str(prod["product_price"]), justify="left", compound="left")
-               self.justify.grid(row=i, column=3, padx=10, pady=(10,0), sticky="ew")
-
-               self.justify=customtkinter.CTkLabel(self.results_frame, text=f"{float(prod['product_price'])*float(prod['product_stock'])}$", justify="left", compound="left")
-               self.justify.grid(row=i, column=4, padx=10, pady=(10,0), sticky="ew")
-
-
+           
+     def popUpNoDatabase(self):
+              if self.messageWin==None or self.messageWin.winfo_exists():
+                    self.messageWin=Win_Message(self, "ERROR!", "No se logró establecer conexión con la base de datos.")
+                    self.messageWin.after(100, self.messageWin.lift)
+                    self.messageWin.after(100, self.messageWin.focus_force)
+              else:
+                    self.messageWin.lift
+                    self.messageWin.focus_force
      def displayleft(self):
                    self.right.configure("normal")
                    
@@ -574,16 +696,10 @@ class DisplaySales(customtkinter.CTkFrame):
       self.rowconfigure(3, weight=1)
 
       self.lista=(MakeDictSale(ReadSales(page)))
+
       if self.lista==[]:
-          if self.messageWin==None or self.messageWin.winfo_exists():
-              self.messageWin=Win_Message(self, "ERROR!", "No se logró establecer conexión con la base de datos.")
-              self.messageWin.after(100, self.messageWin.lift)
-              self.messageWin.after(100, self.messageWin.focus_force)
-          else:
-              self.messageWin.lift
-              self.messageWin.focus_force
+          self.popUpNoDatabase()
               
-            
       else:
 
           self.actual_page=page
@@ -643,6 +759,14 @@ class DisplaySales(customtkinter.CTkFrame):
 
           self.results_frame.grid(column=0, row=3, padx=10, pady=(10, 0) , sticky="nsew", columnspan=6)
           
+     def popUpNoDatabase(self):
+                   if self.messageWin==None or self.messageWin.winfo_exists():
+                         self.messageWin=Win_Message(self, "ERROR!", "No se logró establecer conexión con la base de datos.")
+                         self.messageWin.after(100, self.messageWin.lift)
+                         self.messageWin.after(100, self.messageWin.focus_force)
+                   else:
+                         self.messageWin.lift
+                         self.messageWin.focus_force
 
      def buildFrame(self):
           
@@ -712,7 +836,9 @@ class DisplayNewSale(customtkinter.CTkFrame):
 
         self.master_reference=master
 
+
         self.Win_Pay=None
+        self.messageWin=None
         self.actual_frame=None
         self.rate=rate
         
@@ -743,8 +869,18 @@ class DisplayNewSale(customtkinter.CTkFrame):
         self.frame_product.grid_remove()
         self.frame_payment.grid_remove()
 
+    def popUpNoDatabase(self):
+         if self.messageWin==None or self.messageWin.winfo_exists():
+            self.messageWin=Win_Message(self, "ERROR!", "No se logró establecer conexión con la base de datos.")
+            self.messageWin.after(100, self.messageWin.lift)
+            self.messageWin.after(100, self.messageWin.focus_force)
+         else:
+            self.messageWin.lift
+            self.messageWin.focus_force
+
 # ----- SHOW FUNCTIONS -----
-# They are in charge of first claning the current frame to then show the targeted frame
+# They are in charge of first cleaning the current frame to then show the targeted frame
+
     def showClientFrame(self):
             self.frame_product.grid_remove()
             self.frame_client.grid(column=0, row=0, sticky="nsew")
@@ -772,16 +908,20 @@ class DisplayNewSale(customtkinter.CTkFrame):
                     self.winCustomer.focus_force()
 
     def productStep(self):
+        try:
     
                 if self.entryClient.get()!="":
-    
+                
                      self.customer=GetCustomer(int(self.entryClient.get()))
-                     if self.customer==False:
+                     if self.customer=="NoDatabase":
+                          raise AttributeError
+                     if self.customer=="NoClient":
     
                                     self.openWinCustomer(id_document=int(self.entryClient.get()))
                                     self.feedbackClient.configure(text="Cliente nuevo, agregue los datos del cliente para poder continuar la venta.", text_color="white")
     
                                     return
+                     
                      self.labelClient.configure(text=f"\tCLIENTE: {self.customer["name_customer"]}")
                      self.labelInt.configure(text=f"Cédula de identidad: {self.customer["id_document"]}")
                      self.totalLabel.configure(text=f"TOTAL: ") #PONER EL MONTO EN BS. AL DIA
@@ -789,6 +929,12 @@ class DisplayNewSale(customtkinter.CTkFrame):
                 else:
                     
                     self.feedbackClient.configure(text="Ingrese una cedula! Campo vacío!", text_color="red")
+
+        except AttributeError as e:
+             self.popUpNoDatabase()
+                           
+             
+             
 
     
 #     ----- PRODUCT FRAME RELATED FUNCIONS -----
@@ -804,9 +950,7 @@ class DisplayNewSale(customtkinter.CTkFrame):
          if not self.query.strip():
               return
 
-         result_db=SearchProducts(self.query.strip())
-
-         for i , prod in enumerate(result_db):
+         for i , prod in enumerate(SearchProducts(self.query.strip())): #Fetch the list and make a button out of every result
 
               
               btn=customtkinter.CTkButton(self.search_results_frame,
@@ -825,9 +969,10 @@ class DisplayNewSale(customtkinter.CTkFrame):
          self.entryProduct.delete(0 , "end")
 
          for widget in self.search_results_frame.winfo_children():
-              widget.destroy()
 
+              widget.destroy()
               self.refreshCart()
+
          self.search_results_frame.grid_remove()
 
     def refreshCart(self):
@@ -888,22 +1033,25 @@ class DisplayNewSale(customtkinter.CTkFrame):
               self.Win_Pay.after(100, self.Win_Pay.lift)
               self.Win_Pay.after(200, self.Win_Pay.focus_force)
 
-    #Disable the commit sale function 
 
     def AddPay(self, methodId ):
          
-
          if methodId==1:
+             # Assign the values on cents reflected in dollars of methoId =1
+             #discount the amount to dollars and then recalculaate the amount in BS.
+
+             #If I only use self.total_bs and self.total_usd  to calculate and then print, I think I can get rid of those two variables only using te reference on the labels.
              payment={
-                                  "payment_cents":int(round(float(self.Win_Pay.entry.get())*100, )) ,
-                                  "method_id": methodId,
-                                  "value_usd_cents": int(round(float(self.Win_Pay.entry.get())*100, )) 
-                             }
+                  "payment_cents":int(round(float(self.Win_Pay.entry.get())*100, )) ,
+                  "method_id": methodId,
+                  "value_usd_cents": int(round(float(self.Win_Pay.entry.get())*100, )) 
+                     }
           
              self.total_usd-=payment["payment_cents"]
              self.total_bs=int(round((self.total_usd*self.rate_snapshot_cent)/100))
 
          else:
+             # For any other method discount BS forst and then recalcualate the equivalent in dollars.
              payment={
                         "payment_cents":int(round(float(self.Win_Pay.entry.get())*100, )) ,
                         "method_id": methodId,
@@ -915,26 +1063,27 @@ class DisplayNewSale(customtkinter.CTkFrame):
              if self.total_bs!=0:
               
               self.total_usd=int(round((self.total_bs/self.rate_snapshot_cent)*100, ))
+
              else:
                   self.total_usd=0
 
-
-
+        # Add the payment to the list, configure 
          self.payment_list.append(payment)
-         #print(f"{payment}\n {self.total_usd}$\tBs.{self.total_bs}")
-    
          self.total_usdLabel.configure(text=f"Ref.{self.total_usd/100} \tBs. {self.total_bs/100}")
 
-
-         if self.total_usd<=0 or self.total_usd==0.01:
+         #if payment is complete we submit the sale.
+         if self.total_usd<=0 or self.total_bs<=0:
               
+            #We can make a message or something for feedback.
               self.submitSaleDB()
 
+         #At last close the window.
          if self.Win_Pay is not None:
               self.Win_Pay.destroy()
               self.Win_Pay=None
-# payment_cent, customer_def,  products_list, totalref_cent, rate_snapshot_cent
-    
+
+# ----- SUBMIT SALE DATABASE -----
+# It submits the sale to the database and refresh the frame for a new sale
     def submitSaleDB(self):
          SubmitSale(self.payment_list, self.customer, self.product_list, self.totalref_cent, self.rate_snapshot_cent)
          self.master_reference.DrawNewSale()
@@ -948,7 +1097,6 @@ class DisplayNewSale(customtkinter.CTkFrame):
         self.frame_client.columnconfigure(0, weight=0)
         self.frame_client.columnconfigure(1 , weight=1)
 
-        
         self.entryClient=customtkinter.CTkEntry(self.frame_client, placeholder_text="Ingrese la CI del cliente.", height=30, font=("font89", 25) )
         self.entryClient.grid(column=1, row=0, padx=10, pady=(10,0),sticky="ew")
         self.prodBtn=customtkinter.CTkButton(self.frame_client, text="Siguiente", command=self.productStep)
@@ -956,6 +1104,8 @@ class DisplayNewSale(customtkinter.CTkFrame):
 
         self.feedbackClient=customtkinter.CTkLabel(self.frame_client, text="")
         self.feedbackClient.grid(column=1, row=2, padx=10, pady=(10,0), sticky="ew")
+
+
 
     def buildProduct(self):
         self.frame_product.columnconfigure(0, weight=0)
@@ -970,7 +1120,6 @@ class DisplayNewSale(customtkinter.CTkFrame):
         self.label_List=[]
 
         self.search_results_frame = customtkinter.CTkFrame(self.frame_product)
-        
 
         for  i, label in enumerate(self.product_list):
             self.genLabel=customtkinter.CTkLabel(self.frame_product, text=label["product_name"])
@@ -982,7 +1131,6 @@ class DisplayNewSale(customtkinter.CTkFrame):
         self.totalLabel.grid(column=0, row=len(self.product_list)+7, padx=10, pady=10, sticky="ew")
         self.total_usdLabel.grid(column=0, row=len(self.product_list)+8, padx=10, pady=10, sticky="ew")
         
-
         self.labelClient=customtkinter.CTkLabel(self, text="", height=25 , font=("font89", 20))
         self.labelInt=customtkinter.CTkLabel(self, text="", height=25 , font=("font89", 20))
         self.labelClient.grid(column=1, row=len(self.product_list)+7, padx=10, pady=(10,0), sticky="ew")
@@ -1026,23 +1174,41 @@ class DisplayDailyReport(customtkinter.CTkFrame):
           self.rowconfigure(1, weight=1)
 
           self.totalDailyCents=0
+          self.messageWin=None
+          try: 
+           self.DailySales_DicList=GetDailySales()
+           if self.DailySales_DicList=="NoDataBase":
+                 raise AttributeError
+           
+                 
 
+           self.float_Total, self.floatBs, self.floatUsd=makeDailyReport(self.DailySales_DicList)
 
-          self.DailySales_DicList=GetDailySales()
-          self.float_Total, self.floatBs, self.floatUsd=makeDailyReport(self.DailySales_DicList)
+           self.scrollableFrame=customtkinter.CTkScrollableFrame(self)
 
-          self.scrollableFrame=customtkinter.CTkScrollableFrame(self)
+           self.title=customtkinter.CTkLabel(self, text=" Reporte diario.", font=("font39", 20))
+           self.title.grid(column=0, row=0, pady=10, padx=10, sticky="nsew")
+           if self.DailySales_DicList==[]:
+                 self.title.configure(text=" Reporte diario. Aún no hay ventas registradas. ")
+           self.buildFrame()
 
-          self.title=customtkinter.CTkLabel(self, text=" Reporte diario.", font=("font39", 20))
-          self.title.grid(column=0, row=0, pady=10, padx=10, sticky="nsew")
-
-          self.buildFrame()
-
-          self.scrollableFrame.grid(column=0, row=1, pady=10, padx=10, sticky="nsew")
-          self.totalLabel=customtkinter.CTkLabel(self, text=f"TOTAL: {self.totalDailyCents}$", font=("font39", 32), justify="left", compound="left")
-          self.totalLabel.grid(column=0, row=2, padx=10, pady=(10,0), sticky="nsew")
-
-
+           self.scrollableFrame.grid(column=0, row=1, pady=10, padx=10, sticky="nsew")
+           self.totalLabel=customtkinter.CTkLabel(self, text=f"TOTAL: {self.totalDailyCents}$", font=("font39", 32), justify="left", compound="left")
+           self.totalLabel.grid(column=0, row=2, padx=10, pady=(10,0), sticky="nsew")
+          except AttributeError:
+                self.popUpNoDatabase()
+               
+            
+                    
+    def popUpNoDatabase(self):
+         if self.messageWin==None or self.messageWin.winfo_exists():
+                                                   self.messageWin=Win_Message(self, "ERROR!", "No se logró establecer conexión con la base de datos.")
+                                                   self.messageWin.after(100, self.messageWin.lift)
+                                                   self.messageWin.after(100, self.messageWin.focus_force)
+         else:
+                                                   self.messageWin.lift
+                                                   self.messageWin.focus_force
+          
     def buildFrame(self):
           if not self.DailySales_DicList:
                
@@ -1069,9 +1235,6 @@ class App(customtkinter.CTk):
     def __init__(self):
           super().__init__()
 
-
-          self.actual_page=1
-
           self.columnconfigure((0), weight=0)
           self.columnconfigure((1), weight=1)
 
@@ -1080,11 +1243,11 @@ class App(customtkinter.CTk):
           self.title("Prueba de generación")
           self.geometry("1000x500")
 
-          self.menu=Win_Options(self, "Test App")
+          self.menu=DisplayOptions(self, "Test App")
           self.menu.grid(column=0, row=0,sticky="nsew")
 
-          
-          self.actual_frame=None #Debemos declarar variables para que existan hp
+          self.actual_frame=None 
+          self.actual_page=1
 
           self.addProdWin=None
           self.addSaleWin=None
@@ -1092,17 +1255,22 @@ class App(customtkinter.CTk):
 
           self.messageWin=None
 
-          tbcv_dia=0
-          tpll_dia=0
-          tprm_dia=0 
-          teuro=0 
-          dateString=""
+          self.tbcv_dia=0
+          self.tpll_dia=0
+          self.tprm_dia=0 
+          self.teuro=0 
+          self.dateString=""
           self.defaultRate=0
 
-          self.updateRate(tbcv_dia, tpll_dia, tprm_dia,teuro, dateString)
+          self.stocktMin=0
+
+          self.updateRate()
           
 
-    def updateRate(self, tbcv_dia, tpll_dia, tprm_dia,teuro, dateString):
+#----------UPDATE RATES----------
+#Updates the rates, at call.
+          
+    def updateRate(self):
           try:
                         #display a label showing rates are loading
                         self.menu.BCV_label.configure(text="Cargando...")
@@ -1116,8 +1284,16 @@ class App(customtkinter.CTk):
                              self.menu.date.configure(text=f"{dateString[0:10]}")
                              self.menu.BCV_label.configure(text=f"BCV: {tbcv_dia} Bs")
                              self.menu.EUR_label.configure(text=f"Euro: {teuro} Bs")
+
                              #display a label showing the rates
+                             self.tbcv_dia=tbcv_dia
+                             self.tpll_dia=tpll_dia
+                             self.tprm_dia=tprm_dia
+                             self.teuro=teuro
+                             self.dateString=dateString
+                             
                              self.defaultRate=tbcv_dia
+                             
           except AttributeError as e:
                       #print(e)
                       if self.messageWin is None or self.messageWin.winfo_exists():
@@ -1135,8 +1311,14 @@ class App(customtkinter.CTk):
 #FUNCTIONS THAT DRAW, CLEAN OR MODIFY A FRAME OF ANY TYPE IN ANY WAY.
     def CleanFrame(self):
         if self.actual_frame is not None:
-            self.actual_frame.destroy()
-        
+          self.actual_frame.destroy()
+
+    def DrawOptions(self):
+        self.CleanFrame()
+
+        self.actual_frame=DisplayConfiguration(self)
+        self.actual_frame.grid(row=0, column=1, padx=10, pady=(0, 10), sticky="nsew")
+                
     def DrawInventory(self):
      self.CleanFrame()
      

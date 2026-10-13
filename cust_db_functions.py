@@ -20,12 +20,12 @@ def GetCustomer(id_document):
             fila=result.fetchone()
             if fila== None:
                 #print("\n\tEL cliente no existe.")
-                return False
+                return "NoClient"
             else: 
                 fila["id_document"]=id_document
                 return fila
  except psycopg.OperationalError as e:
-     return False
+     return "NoDatabase"
             
 
 #Makes charge of commit all data for a new customer, from a dictionary.

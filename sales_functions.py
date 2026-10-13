@@ -70,7 +70,7 @@ def GetDailySales():
             return cur.fetchall()
 
  except psycopg.OperationalError as e:
-     return [] #RETURNS AN EMPTY LIST JUST IN CASE
+     return "NoDataBase" #RETURNS AN EMPTY LIST JUST IN CASE
 
 #GETS THE DAILY SALES TO MAKE UP TO THE TOTAL SALES 
 #Receive a dictionary list fetched from GetDailySales() it fetchs all the payments, and summarize all the sales to print the total amount
